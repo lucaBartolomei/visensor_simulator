@@ -182,7 +182,7 @@ def loadImageWithOpenEXR(filepath):
     
     return image_bgr, image_depth
 
-def loadImagesToRosMsg(timestamp,camera_definition,camdir,filename,force_gray):
+def loadImagesToRosMsg(timestamp,image_counter,camera_definition,camdir,filename,force_gray):
     filepath = os.path.join(camdir, filename)
     extension = os.path.splitext(filepath)[1]
     image_msgs = list()
@@ -192,19 +192,20 @@ def loadImagesToRosMsg(timestamp,camera_definition,camdir,filename,force_gray):
         
     elif (extension == '.exr'):
         image_bgr_np, image_depth_np = loadImageWithOpenEXR(filepath)
-        image_msgs.append(['image_depth',createCameraDepthMsg(timestamp,image_depth_np,camera_definition.frame_id)])
+        image_msgs.append(['image_depth',createCameraDepthMsg(timestamp,image_counter,image_depth_np,camera_definition.frame_id)])
 
     if(force_gray):
         image_gray_np = cv2.cvtColor(image_bgr_np, cv2.COLOR_BGR2GRAY)
-        image_msgs.append(['image_raw',createCameraGrayMsg(timestamp,image_gray_np,camera_definition.frame_id)])
+        image_msgs.append(['image_raw',createCameraGrayMsg(timestamp,image_counter,image_gray_np,camera_definition.frame_id)])
     else:
-        image_msgs.append(['image_raw',createCameraRGBMsg(timestamp,image_bgr_np,camera_definition.frame_id)])    
+        image_msgs.append(['image_raw',createCameraRGBMsg(timestamp,image_counter,image_bgr_np,camera_definition.frame_id)])    
     
     return image_msgs
 
-def createCameraGrayMsg(timestamp, image_rgb,frame_id):
+def createCameraGrayMsg(timestamp, image_counter,image_rgb,frame_id):
     rosimage = Image()
     rosimage.header.stamp = timestamp
+    rosimage.header.seq = image_counter
     rosimage.header.frame_id = frame_id
     rosimage.height = image_rgb.shape[0]
     rosimage.width = image_rgb.shape[1]
@@ -214,9 +215,10 @@ def createCameraGrayMsg(timestamp, image_rgb,frame_id):
     
     return rosimage
     
-def createCameraRGBMsg(timestamp, image_rgb,frame_id):
+def createCameraRGBMsg(timestamp, image_counter,image_rgb,frame_id):
     rosimage = Image()
     rosimage.header.stamp = timestamp
+    rosimage.header.seq = image_counter
     rosimage.header.frame_id = frame_id
     rosimage.height = image_rgb.shape[0]
     rosimage.width = image_rgb.shape[1]
@@ -226,9 +228,10 @@ def createCameraRGBMsg(timestamp, image_rgb,frame_id):
     
     return rosimage
     
-def createCameraDepthMsg(timestamp, image_depth,frame_id):
+def createCameraDepthMsg(timestamp, image_counter,image_depth,frame_id):
     rosimage = Image()
     rosimage.header.stamp = timestamp
+    rosimage.header.seq = image_counter
     rosimage.header.frame_id = frame_id
     rosimage.height = image_depth.shape[0]
     rosimage.width = image_depth.shape[1]
@@ -369,7 +372,7 @@ if __name__ == "__main__":
         namespace = "/{0}".format(parsed.namespace) if parsed.namespace else ""
 
 #add imu msg to the bag
-        imu_topic = namespace + "/"+ visim_json_project.imu_name
+        imu_topic = namespace + "/imu0" #+ visim_json_project.imu_name
     
         with open(imu_filepath, 'rb') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
@@ -408,7 +411,7 @@ if __name__ == "__main__":
                     idx = int(image_filename[3:-4])-1
                     timestamp = pose_timestamps[idx]
                     timestamp.nsecs +=1 #add one nano second to garanty the image will be sorted after the imu at the same timestamp
-                    image_msgs = loadImagesToRosMsg(timestamp,cam_data,cam_dirpath,image_filename,parsed.gray_image)
+                    image_msgs = loadImagesToRosMsg(timestamp,image_counter,cam_data,cam_dirpath,image_filename,parsed.gray_image)
                     cam_info_msg = createCameraInfoMsg(timestamp,cam_data)
                     bag.write(cam_info_topic, cam_info_msg, timestamp)
                     for curr_img_msg in image_msgs:

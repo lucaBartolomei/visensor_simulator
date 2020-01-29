@@ -4,27 +4,36 @@
   <arg name="mav_name" default="firefly"/> <!-- some options:  firefly hummingbird TODO(lpt) add neo11    -->
   <arg name="enable_logging" default="false" />
   <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="world" default="$(find rotors_gazebo)/worlds/basic.world" />
+  <arg name="run_gui" default="false" />
+  
+  <arg name="x_0" default="0.0"/>
+  <arg name="y_0" default="0.0"/>
+  <arg name="z_0" default="0.0"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find rotors_gazebo)/worlds/basic.world" />
+    <arg name="world_name" value="$(arg world)" />
     <arg name="debug" value="false"/>
     <arg name="verbose" value="false"/> 
     <arg name="paused" value="false"/>
-    <!-- <arg name="gui" value="false"/> -->
+    <arg name="gui" value="$(arg run_gui)"/>
   </include>
 
   <group ns="$(arg mav_name)">
     <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
       <arg name="mav_name" value="$(arg mav_name)" />
-      <arg name="model" value="$(find visensor_simulator)/resources/mav_with_odom_and_vi_sensor_and_gimbal_no_cameras.gazebo" />
+      <arg name="model" value="$(find visensor_simulator)/resources/mav_with_odom_and_vi_sensor_45deg_no_cameras.gazebo" />
       <arg name="enable_logging" value="$(arg enable_logging)" />
       <arg name="enable_ground_truth" value="true" />
       <arg name="log_file" value="$(arg log_file)"/>
+      <arg name="x" value="$(arg x_0)"/>
+      <arg name="y" value="$(arg y_0)"/>
+      <arg name="z" value="$(arg z_0)"/>
     </include>
   </group>
 
   <group ns="$(arg mav_name)">
-    <node name="mav_linear_mpc" pkg="mav_nonlinear_mpc" type="nonlinear_mpc_node" respawn="true" clear_params="true" output="screen">
+    <node name="mav_nonlinear_mpc" pkg="mav_nonlinear_mpc" type="nonlinear_mpc_node" respawn="true" clear_params="true" output="screen">
       <remap from="odometry" to="odometry_sensor1/odometry" />
       <rosparam file="$(find mav_nonlinear_mpc)/resources/nonlinear_mpc_$(arg mav_name).yaml" />
       <rosparam file="$(find mav_disturbance_observer)/resources/disturbance_observer_$(arg mav_name).yaml"/>
